@@ -1,0 +1,587 @@
+---
+title: "Project"
+output: html_document
+date: "2023-03-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(modelr)
+library(tidyverse)
+library(mlbench) 
+library(caret)
+library(smotefamily)
+library(usmap)
+```
+
+## Load the dataset
+```{r}
+df_rail <- read_csv("Rail_Equipment_Accident_Incident_Data.csv")
+```
+
+```{r}
+head(df_rail)
+```
+
+## Visualization 1: Total Number of Accidents per Year
+```{r}
+#storing how many accidents occurred per year in a data frame
+df <- df_rail %>%
+  group_by(`Report Year`) %>%
+  summarise(counts = n())
+
+#dropping NA values from data frame
+df <- df %>% drop_na()
+#df
+
+ggplot(df, aes(x = `Report Year`, y = counts)) +
+  geom_bar(stat = "identity") +
+  labs(x="Report Year",
+       y="Accident Count",
+       title="Total Number of Accidents per Year")
+```
+Observation: From the above visualization, we can conclude that railroad accidents have overall decreased in the past 48 years. Additionally, the accidents reported over the past 10 years have all been around 2500.
+
+## Visualization 2: Total Persons Evacuated by Visibility
+```{r}
+#storing total evacuated for each category of visibility in a data frame
+df1 <- df_rail %>%
+  select(`Persons Evacuated`, `Visibility`) %>%
+  group_by(`Visibility`) %>%
+  summarise(total_persons_evacuated = sum(`Persons Evacuated`))
+
+#dropping NA values from data frame
+df1 <- df1 %>% drop_na()
+#df1
+
+ggplot(df1, aes(Visibility, total_persons_evacuated, fill=Visibility))+
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = total_persons_evacuated), vjust = -0.3) + 
+  labs(x="Visibility",
+       y="Total Persons Evacuated",
+       title="Total Persons Evacuated by Visibility")
+```
+Observation: From the above visualization, we can conclude that more number of people were evacuated during the Day and the least number of people are evacuated during Dusk.
+
+## Visualization 3: Total Number of Accidents by Visibility
+```{r}
+#storing total accidents for each category of visibility in a data frame
+df2 <- df_rail %>%
+  select(`Persons Evacuated`, `Visibility`) %>%
+  group_by(`Visibility`) %>%
+  summarise(count_of_accidents = n())
+
+#dropping NA values from data frame
+df2 <- df2 %>% drop_na()
+#df2
+
+ggplot(df2, aes(Visibility, count_of_accidents, fill=Visibility))+
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = count_of_accidents), vjust = -0.3) + 
+  labs(x="Visibility",
+       y="Total Number of Accidents",
+       title="Total Number of Accidents by Visibility")
+```
+Observation: From the above visualization, we can conclude that the most accidents occurred during the Day (with Dark being a close second for the visibility with the most accidents). The least number of accidents occurred during Dawn and Dusk.
+
+## Visualization 4: Total Persons Evacuated per Accident by Visibility
+```{r}
+#storing the proportion of people evacuated for each category of visibility in a data frame
+df3 <- df_rail %>%
+  select(`Persons Evacuated`, `Visibility`) %>%
+  group_by(`Visibility`) %>%
+  summarise(evacuation_accident_ratio = sum(`Persons Evacuated`)/n())
+
+#dropping NA values from data frame
+df3 <- df3 %>% drop_na()
+#df3
+
+ggplot(df3, aes(Visibility, evacuation_accident_ratio, fill=Visibility))+
+  geom_bar(stat = "identity") +
+  labs(x="Visibility",
+       y="Total Persons Evacuated per Accident",
+       title="Total Persons Evacuated per Accident by Visibility")
+```
+Observation: From the above visualization, we can conclude that on average more people are evacuated during the Day and the least number of people are evacuated during Dusk.
+
+## Visualization 5: Total Number of Accidents per State
+```{r}
+#storing the total accidents for each state in a data frame
+df4 <- df_rail %>%
+  group_by(`State Name`) %>%
+  summarise(counts = n())
+
+#dropping NA values from data frame
+df4 <- df4 %>% drop_na()
+#df4
+
+ggplot(df4, aes(x = `State Name`, y = counts)) +
+  geom_bar(stat = "identity") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 6)) +
+  labs(x="State Name",
+       y="Accident Count",
+       title="Total Number of Accidents per State")
+```
+
+## Visualization 6: Total Number of Accidents per State Heatmap
+```{r}
+df4Copy <- df4
+
+statepop$full <- toupper(statepop$full)
+
+colnames(df4Copy)[1] <- "full"
+
+total <- merge(statepop,df4Copy,by="full", all.x = TRUE)
+
+total[is.na(total)] <- 0
+
+plot_usmap(data = total, values = "counts", include = c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "HI"), color = "#ef6c00") + 
+  scale_fill_continuous(low = "white", high = "#ef6c00", name = "Total # of Accidents", label = scales::comma) +theme(legend.position = "right") + labs(title="Total Number of Accidents per State") 
+```
+Observation: From the above two visualizations, we can conclude that the most number of accidents are caused in Illinois and Texas followed by California. The least number of accidents occurred in Rhode Island and New Hampshire. The number of accidents may be a reflection on how many trains in general go to that state. Often states with high volumes of tourists or with large import/exports have a greater chance of accidents. 
+
+## Visualization 6: Distribution of Temperature during Accident
+```{r}
+df5 <- df_rail 
+
+ggplot(df5, aes(y=Temperature)) +
+  geom_boxplot() +
+  lims(x=c(-1, 1)) +
+  labs(title="Distribution of Temperature during Accident",
+       y="Temperature") +
+  theme_minimal()
+```
+Observation: From the above visualization, we can conclude that the temperatures range from -75 to 815 degrees Fahrenheit. There are a few outliers where the temperature is extremely high so we can filter out values greater than 200 degrees Fahrenheit.
+
+## Visualization 7: Distribution of Temperature during Accident with Outliers Excluded
+```{r}
+#filtering out all temperatures above 200 F and storing data in a data frame
+df5_filtered <- filter(df5, Temperature < 200)
+
+ggplot(df5_filtered, aes(y=Temperature)) +
+  geom_boxplot() +
+  lims(x=c(-1, 1)) +
+  labs(title="Distribution of Temperature during Accident",
+       y="Temperature") +
+  theme_minimal()
+```
+Observation: From the above visualization, we can conclude that the average temperature during railroad accidents is around 60 degrees Fahrenheit.
+
+## Visualization 8: Total Number of Accidents by Equipment Type
+```{r}
+#storing the total accidents by equipment type in a data frame
+df6 <- df_rail %>%
+  group_by(`Equipment Type`) %>%
+  summarise(count_of_accidents = n())
+
+#dropping NA values from data frame
+df6 <- df6 %>% drop_na()
+#df6
+
+ggplot(df6, aes(`Equipment Type`, count_of_accidents, fill=`Equipment Type`))+
+  geom_bar(stat = "identity") +
+  labs(x="Equipment Type",
+       y="Total Number of Accidents",
+       title="Total Number of Accidents by Equipment Type") +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size = 6), legend.key.size=unit(7,"point"))+guides(colour=guide_legend(nrow=3))
+```
+Observation: From the above visualization, we can conclude that most of the accidents were caused when the equipment type was Freight Train followed by Yard/switching. The least accidents were caused when the equipment type was DMU.
+
+## Visualization 9: Total Number of Accidents Based on Equipment Attended
+```{r}
+#The `Equipment Attended` column contains "yes", "no", 0, and 7 values. Since 0 and 7 appear to be incorrect values, they were filtered out from the data set and only Yer or No values were kept. 
+df7 <- filter(df_rail, `Equipment Attended` == 'No' | `Equipment Attended` == 'Yes')
+
+ggplot(df7, aes(`Equipment Attended`, fill=`Equipment Attended`))+
+  geom_bar(stat="count",
+        position="identity") +
+  labs(x="Equipment Attended",
+       y="Total Number of Accidents",
+       title="Total Number of Accidents Based on Equipment Attended")
+```
+Observation: From the above visualization, we can conclude that for most of the accidents, the equipment was attended when the accident took place.
+
+## Visualization 10: Temperature vs Train Speed 
+```{r}
+#filtering out temperture outliers
+df8 <- filter(df_rail, Temperature < 200)
+
+ggplot(data = df8,
+       mapping = aes(x=`Train Speed`, y=`Temperature`)) + 
+       geom_point(alpha=0.1) +
+       labs(x="Train Speed",
+       y="Temperature",
+       title="Temperature vs Train Speed")
+```
+Observation: From the above visualization, we can conclude that temperatures usually ranged from -50 to 125 degrees Fahrenheit when the train speed is between 0 and 75. The range to temperatures got smaller as train speeds increased over 75. 
+
+## Visualization 11: Temperature Distribution for Railroad Accidents
+```{r message=FALSE}
+ggplot(df8, aes(x=Temperature)) +
+  geom_histogram(binwidth=5) +
+  labs(x="Temperature",
+       title="Temperature Distribution for Railroad Accidents") +
+  theme_minimal()
+```
+Observation: From the above visualization, we can conclude that temperature produces a normal distribution and most of the accidents are caused when the temperature is around 60 degrees Fahrenheit.
+
+## Visualization 12: Train Speed Distribution for Railroad Accidents
+```{r message=FALSE}
+ggplot(df8, aes(x=`Train Speed`)) +
+  geom_histogram(binwidth=5) +
+  labs(x="Train Speed",
+       title="Train Speed Distribution for Railroad Accidents") +
+  theme_minimal() 
+```
+Observation: From the above visualization, we can conclude that most of the accidents are caused when the Train speed is between 0 to 15 or when it is low.
+
+## Visualization 12: Weather Condition by Visibility
+```{r}
+viz_data <- df_rail %>% select(`Weather Condition`, `Weather Condition Code`, `Visibility`, `Visibility Code`)
+
+viz_data <- na.omit(viz_data)
+#Remove empty string data
+rows_with_empty_strings_visibility <- grepl("^$", viz_data$Visibility)
+rows_with_empty_strings_weather <- grepl("^$", viz_data$`Weather Condition`)
+viz_data <- viz_data[!rows_with_empty_strings_visibility,]
+viz_data <- viz_data[!rows_with_empty_strings_weather,]
+
+viz_data <- viz_data %>%
+  group_by(`Weather Condition`, Visibility) %>%
+  summarize(Count = n())
+
+viz_data <- na.omit(viz_data)
+
+ggplot(viz_data, aes(x = `Weather Condition`, y = Count, fill = Visibility)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Weather Condition by Visibility", x = "Weather Condition", y = "Count", fill = "Visibility") +
+  theme_minimal()
+```
+Observation: From the above visualization, we can conclude that the most accidents were caused in the day with a clear weather. Across all weather conditions we can notice that most accidents occurred either in the dark or in the day. The least accidents occurred during sleet.
+
+## Visualization 13: Top 5 Most Frequent Accident Types
+```{r}
+viz2_data <- df_rail %>% select(`Accident Type`)
+ggplot(viz2_data, aes(x = `Accident Type`)) +
+  geom_bar() +
+  labs(title = "Top 5 Most Frequent Accident Types",
+       x = "Accident Type",
+       y = "Frequency") +
+  coord_flip() +
+  theme_classic() +
+  scale_x_discrete(limits = names(sort(table(viz2_data$`Accident Type`), decreasing = TRUE)[1:5]))
+```
+Observation: From the above visualization, we can conclude that Derailment was the most frequent type of accident that occurred. Rear-end collision was the least frequent type of accident.
+
+## Visualization 14: Frequency of each accident type by track type
+```{r}
+viz3_data <- df_rail %>% select(`Track Type`, `Accident Type`)
+
+#Pre-processing to remove empty values
+rows_with_empty_strings_track <- grepl("^$", viz3_data$`Track Type`)
+viz3_data <- viz3_data[!rows_with_empty_strings_track,]
+
+#Visualization
+ggplot(viz3_data, aes(x = `Accident Type`, fill = `Track Type`)) +
+  geom_bar(position = "dodge", width = 0.5) +
+  labs(title = "Frequency of each accident type by track type",
+       x = "Accident Type",
+       y = "Frequency",
+       fill = "Track Type") +
+  theme_minimal() + 
+  scale_x_discrete(limits = names(sort(table(viz3_data$`Accident Type`), decreasing = TRUE)[1:5]))
+```
+Observation: From the above visualization, we can conclude that Derailment was the most frequent type of accident that occurred. Across all accident types, the accidents often involved either main or yard track types. 
+
+## Visualization 15: Frequency of Each Type of Positive Test
+```{r}
+drug_impact <- df_rail %>% select(`Positive Alcohol Tests`, `Positive Drug Tests`)
+drug_impact <- na.omit(drug_impact)
+
+drug_impact$`Positive Alcohol Tests` <- as.logical(drug_impact$`Positive Alcohol Tests`)
+drug_impact$`Positive Drug Tests` <- as.logical(drug_impact$`Positive Drug Tests`)
+
+counts <- table(drug_impact)
+
+viz4_data <- as.data.frame(counts)
+viz4_data$labels <- c("Both Negative", "Only Alcohol", "Only Drug", "Both Positive")
+viz4_data <- viz4_data[-1,]
+
+# Create stacked bar plot
+ggplot(viz4_data, aes(x = labels, y = Freq)) + 
+  geom_bar(stat = "identity", fill = "maroon") +
+  labs(y = "Frequency", x="Test", title="Frequency of Each Type of Positive Test") 
+```
+Observation: From the above visualization, we can conclude that majority of the tests done showed the presence of drugs. It was pretty rare for both alcohol and drug tests to be positive simultaneously. 
+
+## Visualization 16: Relationship between Total Minimum Engineers and Total Minimum Conductors
+```{r}
+viz5_data <- df_rail %>% select(`Hours Engineers On Duty`, `Minutes Engineers On Duty`, `Hours Conductors On Duty`, `Minutes Conductors On Duty`)
+viz5_data$totalMinEngineers = (60 * viz5_data$`Hours Engineers On Duty`) + viz5_data$`Minutes Engineers On Duty`
+viz5_data$totalMinConductors = (60 * viz5_data$`Hours Conductors On Duty`) + viz5_data$`Minutes Conductors On Duty`
+
+viz5_data <- na.omit(viz5_data)
+
+engineers_iqr <- IQR(viz5_data$totalMinEngineers)
+conductors_iqr <- IQR(viz5_data$totalMinConductors)
+engineers_upper <- quantile(viz5_data$totalMinEngineers, 0.75) + 1.5 * engineers_iqr
+engineers_lower <- quantile(viz5_data$totalMinEngineers, 0.25) - 1.5 * engineers_iqr
+conductors_upper <- quantile(viz5_data$totalMinConductors, 0.75) + 1.5 * conductors_iqr
+conductors_lower <- quantile(viz5_data$totalMinConductors, 0.25) - 1.5 * conductors_iqr
+
+# filter the data to remove outliers
+viz5_data <- viz5_data %>%
+  filter(
+    totalMinEngineers >= engineers_lower,
+    totalMinEngineers <= engineers_upper,
+    totalMinConductors >= conductors_lower,
+    totalMinConductors <= conductors_upper
+  )
+
+# create the plot with the filtered data
+ggplot(viz5_data, aes(x = totalMinEngineers, y = totalMinConductors)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x = "Total Minimum Engineers", y = "Total Minimum Conductors") +
+  theme_classic()
+```
+Observation: From the above visualization, we can conclude that as the number of minimum engineers increased, the number of minimum conductors also increases. There is a strong, positive, linear relationship between the two factors. 
+
+## Visualization 17: Higher train speed associated with alcohol
+```{r}
+viz6_data <- df_rail %>% select(`Train Speed`, `Positive Alcohol Tests`, `Positive Drug Tests`)
+
+viz6_data$isPositiveAlcohol <-as.logical(viz6_data$`Positive Alcohol Tests`)
+viz6_data$isPositiveDrug <-as.logical(viz6_data$`Positive Drug Tests`)
+
+viz6_data <- na.omit(viz6_data)
+
+ggplot(viz6_data, aes(x=isPositiveAlcohol, y=`Train Speed`, fill=isPositiveAlcohol)) +
+geom_boxplot() +
+scale_fill_brewer(palette="Set1", direction=-1) +
+labs(y="Train Speed",
+title="Higher train speed associated with alcohol") +
+theme_minimal() + 
+  stat_summary(fun.y = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..), 
+               width = .75, linetype = "dashed", 
+               position = position_dodge2(width = 0.75))
+```
+Observation: From the above visualization, we can conclude that the train speed range increases with the presence of a positive alcohol test. The median (solid line) and mean (dashed line) train speed is also higher with the presence of a positive alcohol test.
+
+## Visualization 18: Higher train speed associated with drug
+```{r}
+ggplot(viz6_data, aes(x=isPositiveDrug, y=`Train Speed`, fill=isPositiveDrug)) +
+geom_boxplot() +
+scale_fill_brewer(palette="Set1", direction=-1) +
+labs(y="Train Speed",
+title="Higher train speed associated with drug") +
+theme_minimal() + 
+  stat_summary(fun = mean, geom = "errorbar", aes(ymax = ..y.., ymin = ..y..), 
+               width = .75, linetype = "dashed", 
+               position = position_dodge2(width = 0.75))
+```
+Observation: From the above visualization, we can conclude that the train speed range increases with the presence of a positive drug test. The median (solid line) train speed, however, is around 5 regardless of the outcome of the drug test. The mean (dashed line) train speed also the same regardless of the outcome of the drug test.
+
+
+##Regression Testing
+```{r}
+set.seed(2)
+df_part <- resample_partition(df_rail,p=c(train=0.5, test=0.5))
+head(df_part)
+```
+# Plotting to check the relationship between `Total Persons Injured` and candidate predictors
+```{r}
+ggplot(df1_filtered, aes(x=(`Weather Condition`), y=(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Weather Condition", y="Total Persons Injured", title="Total Persons Injured vs Weather Condition") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=(`Train Speed`), y=(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Train Speed", y="Total Persons Injured", title="Total Persons Injured vs Train Speed Distribution") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=log(`Train Speed`), y=log(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Train Speed", y="Total Persons Injured" , title="Total Persons Injured vs Train Speed Distribution") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=(`Temperature`), y=(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Temperature", y="Total Persons Injured", title="Total Persons Injured vs Temperature Distribution") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=log(`Temperature`), y=log(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Temperature", y="Total Persons Injured", title="Total Persons Injured vs Temperature Distribution") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=(`Positive Drug Tests`), y=(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="Positive Drug Tests", y="Total Persons Injured", title="Total Persons Injured vs Positive Drug Tests Distribution") +
+  theme_minimal()
+
+ggplot(df1_filtered, aes(x=log(`First Car Position`), y=log(`Total Persons Injured`))) +
+  geom_point() +
+  geom_smooth() +
+  geom_smooth(method="lm", color="red") +
+  labs(x="First Car Position", y="Total Persons Injured", title="Total Persons Injured vs First Car Position Distribution") +
+  theme_minimal()
+```
+# Fitting the linear regression models
+```{r}
+fit_1 <- lm((`Total Persons Injured`) ~ (`Weather Condition Code`), data=df_part$train)
+fit_2 <- lm((`Total Persons Injured`) ~ (`Train Speed`), data=df_part$train)
+fit_3 <- lm((`Total Persons Injured`) ~ (`Temperature`), data=df_part$train)
+fit_4 <- lm((`Total Persons Injured`) ~ (`Positive Drug Tests`), data=df_part$train)
+fit_5 <- lm((`Total Persons Injured`) ~ (`Minutes Engineers On Duty`), data=df_part$train)
+fit_6 <- lm((`Total Persons Injured`) ~ (`First Car Position`), data=df_part$train)
+```
+#rsme values were high
+```{r}
+rmse(fit_1, df_part$test)
+rmse(fit_2, df_part$test)
+rmse(fit_3, df_part$test)
+rmse(fit_4, df_part$test)
+rmse(fit_5, df_part$test)
+rmse(fit_6, df_part$test)
+```
+Observation: As observed from the above graphs, there is not a strong linear 
+relationship between the `Total Persons Injured` and candidate predictors so we will try other models. 
+
+# Logistic Regression
+```{r}
+
+# Filtering out the required columns and omitting NA values:
+
+df_rail_filtered <- df_rail %>%
+  select(`Temperature`,`Weather Condition Code`, `Weather Condition`,`Visibility Code`,
+              `Visibility`, `Train Speed`, `Positive Alcohol Tests`, 
+              `Positive Drug Tests`,`Engineers On Duty`,
+         `Minutes Engineers On Duty`, `First Car Position`, `Accident Type`,
+         `Total Persons Injured`) %>%
+  na.omit()
+
+# Transforming the `Total Persons Injured` to a binary isInjured column:
+
+df_rail_filtered$isInjured <-ifelse(df_rail_filtered$`Total Persons Injured` > 0, "Injured", "No Injury")
+head(df_rail_filtered)
+
+# Checking the classes and converting isInjured as factor:
+
+df_rail_filtered$isInjured <- as.factor(df_rail_filtered$isInjured)
+class(df_rail_filtered$isInjured)
+class(df_rail_filtered$`Train Speed`)
+
+# Creating test and train partitions:
+
+set.seed(1)
+train <- createDataPartition(df_rail_filtered$isInjured, p=0.6, list=FALSE)
+
+table(df_rail_filtered$isInjured[train])
+
+df_train <- df_rail_filtered[as.integer(train),]
+df_test <- df_rail_filtered[-as.integer(train),]
+
+# Down sampling:
+
+undersampled_data <- downSample(df_train, y = df_train$isInjured)
+
+# Fitting the model:
+
+fit <- glm(isInjured ~ `Train Speed`, data=undersampled_data, family=binomial(link="logit"))
+
+summary(fit)
+
+# Calculating the predicted probabilities and plotting histogram:
+
+prob <- predict(fit, newdata=df_test, type="response")
+
+pred <- ifelse(prob > 0.5, "pos", "neg")
+
+hist(prob)
+
+mean(pred == df_test$isInjured, na.rm=TRUE)
+table(pred, df_test$isInjured)
+
+# Functions for calculating sesnstivity and specificity:
+
+sens <- function(c, p, ref, positive = levels(ref)[2])
+{
+  mean((p > c)[ref == positive], na.rm=TRUE)
+}
+
+sens(0.5, prob, df_test$isInjured)
+
+spec <- function(c, p, ref, negative = levels(ref)[1])
+{
+  mean((p < c)[ref == negative], na.rm=TRUE)
+}
+
+spec(0.5, prob, df_test$isInjured)
+
+# Plotting the ROC curve:
+
+roc <- tibble(p=seq(from=0, to=1, by=0.01)) %>%
+  mutate(sensitivity = map_dbl(p, sens, p=prob, ref=df_test$isInjured),
+         specificity = map_dbl(p, spec, p=prob, ref=df_test$isInjured),
+         TPR=sensitivity,
+         FPR=1 - specificity)
+roc
+
+ggplot(roc, aes(x=FPR, y=TPR)) + 
+  geom_path(color="red", size=1) +
+  geom_vline(xintercept=0, color="green", linetype="dotdash") +
+  geom_hline(yintercept=1, color="green", linetype="dotdash") +
+  geom_abline(intercept=0, slope=1, color="blue", linetype="dotted") +
+  labs(x="False positive rate (1 - specificity)",
+       y="True positive rate (sensitivity)") +
+  theme_minimal()
+
+# Calculating the AUC value:
+
+sum(roc$TPR[-1] * abs(diff(roc$FPR))) # AUC
+
+# Fitting the model using a different function, including down sampling:
+
+fit2 <- train(isInjured ~ `Train Speed`, data=df_train,
+              method="glm", family=binomial(link="logit"),
+              preProcess="medianImpute",
+              trControl=trainControl(method="none",
+                                     sampling="down"),
+              na.action=na.pass)
+
+confusionMatrix(predict(fit2, df_test, na.action=na.pass),
+                df_test$isInjured)
+```
+```{r}
+# Testing other models for comparison:
+fit3 <- train(isInjured ~ `Temperature`, data=df_train,
+              method="glm", family=binomial(link="logit"),
+              preProcess="medianImpute",
+              trControl=trainControl(method="none",
+                                     sampling="down"),
+              na.action=na.pass)
+
+confusionMatrix(predict(fit3, df_test, na.action=na.pass),
+                df_test$isInjured)
+```
