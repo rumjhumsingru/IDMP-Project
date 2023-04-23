@@ -396,51 +396,64 @@ set.seed(2)
 df_part <- resample_partition(df_rail,p=c(train=0.5, test=0.5))
 head(df_part)
 ```
+
+```{r}
+# Filtering out the required columns and omitting NA values:
+
+df_rail_filtered <- df_rail %>%
+  select(`Temperature`,`Weather Condition Code`, `Weather Condition`,`Visibility Code`,
+              `Visibility`, `Train Speed`, `Positive Alcohol Tests`, 
+              `Positive Drug Tests`,`Engineers On Duty`,
+         `Minutes Engineers On Duty`, `First Car Position`, `Accident Type`,
+         `Total Persons Injured`) %>%
+  na.omit()
+
+```
 # Plotting to check the relationship between `Total Persons Injured` and candidate predictors
 ```{r}
-ggplot(df1_filtered, aes(x=(`Weather Condition`), y=(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=(`Weather Condition`), y=(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Weather Condition", y="Total Persons Injured", title="Total Persons Injured vs Weather Condition") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=(`Train Speed`), y=(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=(`Train Speed`), y=(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Train Speed", y="Total Persons Injured", title="Total Persons Injured vs Train Speed Distribution") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=log(`Train Speed`), y=log(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=log(`Train Speed`), y=log(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Train Speed", y="Total Persons Injured" , title="Total Persons Injured vs Train Speed Distribution") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=(`Temperature`), y=(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=(`Temperature`), y=(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Temperature", y="Total Persons Injured", title="Total Persons Injured vs Temperature Distribution") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=log(`Temperature`), y=log(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=log(`Temperature`), y=log(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Temperature", y="Total Persons Injured", title="Total Persons Injured vs Temperature Distribution") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=(`Positive Drug Tests`), y=(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=(`Positive Drug Tests`), y=(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
   labs(x="Positive Drug Tests", y="Total Persons Injured", title="Total Persons Injured vs Positive Drug Tests Distribution") +
   theme_minimal()
 
-ggplot(df1_filtered, aes(x=log(`First Car Position`), y=log(`Total Persons Injured`))) +
+ggplot(df_rail_filtered, aes(x=log(`First Car Position`), y=log(`Total Persons Injured`))) +
   geom_point() +
   geom_smooth() +
   geom_smooth(method="lm", color="red") +
@@ -470,17 +483,6 @@ relationship between the `Total Persons Injured` and candidate predictors so we 
 
 # Logistic Regression
 ```{r}
-
-# Filtering out the required columns and omitting NA values:
-
-df_rail_filtered <- df_rail %>%
-  select(`Temperature`,`Weather Condition Code`, `Weather Condition`,`Visibility Code`,
-              `Visibility`, `Train Speed`, `Positive Alcohol Tests`, 
-              `Positive Drug Tests`,`Engineers On Duty`,
-         `Minutes Engineers On Duty`, `First Car Position`, `Accident Type`,
-         `Total Persons Injured`) %>%
-  na.omit()
-
 # Transforming the `Total Persons Injured` to a binary isInjured column:
 
 df_rail_filtered$isInjured <-ifelse(df_rail_filtered$`Total Persons Injured` > 0, "Injured", "No Injury")
